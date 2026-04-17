@@ -16,14 +16,7 @@ Welcome! This demo lets you explore the **Creative Creature Creator (CrCrCr)** a
 
 ## How to run
 
-1. Open `index.html` in a browser.
-2. Make sure these folders/files are next to it (inside `Demo/`):
-   - `plugin_CrCrCr.js`
-   - `examples/`
-   - `icons/`
-   - `iconsforplot/`
-   - `imgs/`
-3. If using GitHub Pages, keep the same relative structure.
+Go to https://aliciafrancomartinez.github.io/demoCrCrCr.github.io/.
 
 ## Notes
 
