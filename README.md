@@ -2,21 +2,21 @@
 
 Welcome! This demo lets you explore the **Creative Creature Creator (CrCrCr)** and the indicators it produces from drawing behavior.
 
-## What You Can Do
+## What you can do
 
-- **Preloaded creatures**: open prepared examples and inspect their indicators.
-- **Upload a creature**: load your own `actions` + `summary` CSVs (and optional PNG).
+- **Preloaded creatures**: open prepared examples from our pilot study and inspect their indicators.
+- **Upload a creature**: load your own `actions` + `summary` CSVs (and optional PNG) and inspect their indicators.
 - **Draw a new creature**: use the creator directly, then return to view indicators and timeline.
 
-## What You See
+## What you see
 
 - **Summary Indicators** panel: key creativity-related metrics for the selected creature.
 - **Action Timeline**: layer-by-layer action sequence over time, including phases and key moments.
 - **Downloads**: export `Summary CSV`, `Actions CSV`, and `Timeline PNG`.
 
-## How To Run
+## How to run
 
-1. Open `crcrcr_demo.html` in a browser.
+1. Open `index.html` in a browser.
 2. Make sure these folders/files are next to it (inside `Demo/`):
    - `plugin_CrCrCr.js`
    - `examples/`
