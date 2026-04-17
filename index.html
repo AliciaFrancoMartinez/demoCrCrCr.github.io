@@ -627,7 +627,8 @@
         };
 
         let currentDataset = null;
-        let currentTimelineDetail = 1;
+        const TIMELINE_DEFAULT_DETAIL = 2;
+        let currentTimelineDetail = TIMELINE_DEFAULT_DETAIL;
         let drawInProgress = false;
         let latestDrawMaxSeconds = 300;
 
@@ -827,8 +828,8 @@
             nLayers: "Total number of layers present at the end of the drawing phase.",
             nFeatures: "Count of sticker/object layers used in the drawing.",
             nDraws: "Count of freehand drawing layers/strokes created.",
-            flexibility: "Variety score based on diversity of visual elements/actions used.",
-            elaboration_total: "Total amount of elaborative work computed from action-log operations.",
+            flexibility: "Number of different categories of elements used in the drawing.",
+            elaboration_total_metric: "Total number of modification actions over all layers.",
             elaboration_avg_per_layer: "Elaboration total divided by the number of layers.",
             area: "Proportion of the canvas occupied by the final drawing.",
             overlap: "Proportion of canvas area where layers overlap each other.",
@@ -890,10 +891,10 @@
                   <div class="board-big">${val("flexibility")}</div>
                 </div>
                 <div class="board-cell">
-                  ${labelWithInfo("board-title", "Elaboration", "elaboration_total")}
+                  ${labelWithInfo("board-title", "Elaboration")}
                   <div class="board-subgrid-2 tight">
                     <div>
-                      ${labelWithInfo("board-subhead", "Total", "elaboration_total")}
+                      ${labelWithInfo("board-subhead", "Total", "elaboration_total_metric")}
                       <div class="board-subvalue">${val("elaboration_total")}</div>
                     </div>
                     <div>
@@ -925,7 +926,7 @@
                   <div class="board-big">${val("crops")}</div>
                 </div>
                 <div class="board-cell">
-                  ${labelWithInfo("board-title", "Colors", "nColors_final")}
+                  ${labelWithInfo("board-title", "Colors")}
                   <div class="board-subgrid-2">
                     <div>
                       ${labelWithInfo("board-subhead", "Final", "nColors_final")}
@@ -1010,7 +1011,7 @@
           return { points, layers, auxPoints };
         }
 
-        function renderTimelinePlot(actionsCsv, detailFactor, summaryCsv, datasetMaxSeconds) {
+        function renderTimelinePlot(actionsCsv, detailFactor, summaryCsv, datasetMaxSeconds, imageSrc) {
           const data = buildTimelineData(actionsCsv);
           const points = data.points;
           const layers = data.layers;
@@ -1021,7 +1022,7 @@
 
           const safeDetail = Math.max(1, Number(detailFactor || 1));
           const width = Math.max(420, Math.round(640 * safeDetail));
-          const yAxisWidth = 225;
+          const yAxisWidth = 180;
           const left = 40;
           const right = 40;
           const top = 26;
@@ -1157,6 +1158,9 @@
               </div>
             `;
           }).join("");
+          const timelinePreviewHtml = String(imageSrc || "").trim()
+            ? `<img src="${escapeHtml(imageSrc)}" alt="Creature preview" style="width:100%; aspect-ratio:1 / 1; object-fit:contain; border:1px solid #334155; border-radius:10px; background:#0f172a;" />`
+            : `<div style="width:100%; aspect-ratio:1 / 1; display:grid; place-items:center; color:#94a3b8; border:1px dashed #334155; border-radius:10px; background:#0f172a; font-size:13px;">No preview available</div>`;
 
           return `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 10px 0; flex-wrap:wrap;">
@@ -1213,6 +1217,9 @@
                 <div style="display:flex; flex-direction:column; gap:10px;">
                   ${legendEntriesHtml}
                 </div>
+                <div style="border-top:1px solid #334155; margin:12px 0 10px;"></div>
+                <div style="color:#e5e7eb; font-size:16px; font-weight:700; margin:0 0 8px 0;">Preview</div>
+                ${timelinePreviewHtml}
               </div>
             </div>
           `;
@@ -1226,7 +1233,7 @@
           if (!points.length && !auxPoints.length) return "";
 
           const plotWidth = 2200;
-          const yAxisWidth = 255;
+          const yAxisWidth = 204;
           const legendWidth = 360;
           const outerPad = 26;
           const left = 60;
@@ -1491,7 +1498,7 @@
 
           zoomOut.onclick = () => applyDetail(currentTimelineDetail - 0.2);
           zoomIn.onclick = () => applyDetail(currentTimelineDetail + 0.2);
-          zoomReset.onclick = () => applyDetail(1);
+          zoomReset.onclick = () => applyDetail(TIMELINE_DEFAULT_DETAIL);
           slider.oninput = () => {
             label.textContent = `X detail ${Number(slider.value || 1).toFixed(1)}x`;
           };
@@ -1516,7 +1523,8 @@
             currentDataset.actionsCsv,
             currentTimelineDetail,
             currentDataset.summaryCsv,
-            currentDataset.timelineMaxSeconds
+            currentDataset.timelineMaxSeconds,
+            currentDataset.imageSrc || ""
           );
           setupTimelineZoom();
           if (anchor && typeof anchor.contentRatio === "number") {
@@ -1552,7 +1560,7 @@
           ].filter(Boolean).join(" • ");
           resultsSourceEl.textContent = ctxText ? `${sourceText} (${ctxText})` : sourceText;
           summaryContentEl.innerHTML = buildSummaryHtml(currentDataset.summaryCsv, context, currentDataset.imageSrc || "");
-          currentTimelineDetail = 1;
+          currentTimelineDetail = TIMELINE_DEFAULT_DETAIL;
           renderCurrentTimeline();
           window.scrollTo({ top: 0, behavior: "smooth" });
         }
