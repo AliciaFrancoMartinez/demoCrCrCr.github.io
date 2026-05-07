@@ -531,7 +531,7 @@
     </div>
 
     <script src="https://unpkg.com/jspsych@8.2.2"></script>
-    <script src="./plugin_CrCrCr.js"></script>
+    <script src="../plugin_CrCrCr.js"></script>
     <script>
       (function () {
         const PRELOADED_EXAMPLES = [
@@ -602,17 +602,18 @@
         };
 
         const SUMMARY_LAYOUT = [
-          ["nLayers", "Layers"],
+          ["prodElaboration", "Product Elaboration"],
           ["nFeatures", "Features"],
           ["nDraws", "Draw Actions"],
-          ["nDrawsCreated", "Created in Draw"],
-          ["flexibility", "Flexibility"],
-          ["elaboration_total", "Elaboration Total"],
-          ["elaboration_avg_per_layer", "Elaboration / Layer"],
+          ["nDrawsCreated", "Draw Layers Created"],
+          ["prodFlexibility", "Product Flexibility"],
+          ["procFlexibility", "Process Flexibility"],
+          ["procElaboration_tot", "Process Elaboration Total"],
+          ["procElaboration_avg", "Process Elaboration Avg / Layer"],
           ["crops", "Crops"],
           ["area", "Area"],
           ["overlap", "Overlap"],
-          ["drawing_time", "Time (s)"],
+          ["drawing_time", "Drawing Time (s)"],
           ["nColors_final", "Final Colors"],
           ["nColors_changed", "Colors Changed"],
           ["undos", "Undos"],
@@ -823,26 +824,27 @@
           return phases;
         }
 
-        function buildSummaryHtml(summaryCsv, context, imageSrc) {
+        function buildSummaryHtml(summaryCsv, actionsCsv, context, imageSrc) {
           const INDICATOR_DESCRIPTIONS = {
-            nLayers: "Total number of layers present at the end of the drawing phase.",
-            nFeatures: "Count of sticker/object layers used in the drawing.",
-            nDraws: "Count of freehand drawing layers/strokes created.",
-            flexibility: "Number of different categories of elements used in the drawing.",
-            elaboration_total_metric: "Total number of modification actions over all layers.",
-            elaboration_avg_per_layer: "Elaboration total divided by the number of layers.",
-            area: "Proportion of the canvas occupied by the final drawing.",
-            overlap: "Proportion of canvas area where layers overlap each other.",
-            drawing_time: "Seconds used to complete the drawing phase.",
-            crops: "Number of crop operations performed during drawing.",
-            nColors_final: "Number of distinct colors present in the final drawing.",
-            nColors_changed: "Number of color-change operations recorded in the action log.",
-            nDeleted: "Number of layers deleted during drawing.",
-            undos: "Number of undo commands recorded.",
-            redos: "Number of redo commands recorded."
+            prodElaboration: "Product elaboration: total number of layers present in the final creature.",
+            nFeatures: "Product count of sticker/object layers used in the final creature.",
+            nDraws: "Product count of freehand drawing layers in the final creature.",
+            prodFlexibility: "Product flexibility: number of different element types in the final creature.",
+            procFlexibility: "Process flexibility: number of distinct action types performed during the process.",
+            procElaboration_tot: "Process elaboration total: total number of elaborative modification actions.",
+            procElaboration_avg: "Process elaboration average: process elaboration total divided by product elaboration.",
+            area: "Product area: proportion of the canvas occupied by the final creature.",
+            overlap: "Product overlap: proportion of canvas area where final layers overlap each other.",
+            drawing_time: "Process drawing time in seconds.",
+            crops: "Process count of crop operations performed during drawing.",
+            nColors_final: "Product number of distinct colors present in the final creature.",
+            nColors_changed: "Process number of color-change operations recorded in the action log.",
+            nDeleted: "Process number of layers deleted during drawing.",
+            undos: "Process number of undo commands recorded.",
+            redos: "Process number of redo commands recorded."
           };
           const labelWithInfo = (cssClass, label, indicatorKey) => {
-            const safeLabel = escapeHtml(label);
+            const safeLabel = escapeHtml(label).replace(/\n/g, "<br>");
             const description = INDICATOR_DESCRIPTIONS[indicatorKey];
             if (!description) return `<div class="${cssClass}">${safeLabel}</div>`;
             const safeDescription = escapeHtml(description);
@@ -857,7 +859,52 @@
           const translated = EXAMPLE_DESCRIPTION_TRANSLATIONS[translationKey];
           const descriptionText = translated || row.description || "No description available.";
           const description = escapeHtml(descriptionText);
-          const val = (k) => escapeHtml(formatMetric(k === "drawing_time" ? (row.drawing_time || row.time) : row[k]));
+          const metricValue = (...keys) => {
+            for (let i = 0; i < keys.length; i += 1) {
+              const key = keys[i];
+              const value = row[key];
+              if (value !== undefined && value !== null && value !== "") return value;
+            }
+            return "";
+          };
+          const computeProcessFlexibilityFromActions = () => {
+            const actionRows = parseCsv(actionsCsv || "");
+            if (!actionRows.length) return "";
+            const uniqueActions = new Set();
+            const layerCols = Object.keys(actionRows[0] || {}).filter((k) => /^Layer\d+_/.test(k));
+            actionRows.forEach((r) => {
+              const rowAction = String(r.action_type || "").trim();
+              if (rowAction && rowAction !== "NA") {
+                uniqueActions.add(rowAction);
+                return;
+              }
+              layerCols.forEach((col) => {
+                const value = String(r[col] || "").trim();
+                if (value && value !== "NA") uniqueActions.add(value);
+              });
+            });
+            return uniqueActions.size;
+          };
+          const procFlexFromActions = computeProcessFlexibilityFromActions();
+          const metrics = {
+            prodElaboration: metricValue("prodElaboration", "nLayers"),
+            prodFlexibility: metricValue("prodFlexibility", "flexibility"),
+            procFlexibility: metricValue("procFlexibility") || procFlexFromActions,
+            procElaboration_tot: metricValue("procElaboration_tot", "elaboration_total"),
+            procElaboration_avg: metricValue("procElaboration_avg", "elaboration_avg_per_layer"),
+            nFeatures: metricValue("nFeatures"),
+            nDraws: metricValue("nDraws"),
+            area: metricValue("area"),
+            overlap: metricValue("overlap"),
+            drawing_time: metricValue("drawing_time", "time"),
+            crops: metricValue("crops"),
+            nColors_final: metricValue("nColors_final"),
+            nColors_changed: metricValue("nColors_changed"),
+            nDeleted: metricValue("nDeleted"),
+            undos: metricValue("undos"),
+            redos: metricValue("redos")
+          };
+          const val = (k) => escapeHtml(formatMetric(metrics[k]));
           const imageHtml = imageSrc
             ? `<img class="summary-image" src="${escapeHtml(imageSrc)}" alt="Creature preview" />`
             : `<div class="summary-image-fallback">No image available</div>`;
@@ -873,11 +920,11 @@
             <div class="summary-board">
               <div class="summary-board-top">
                 <div class="board-cell">
-                  ${labelWithInfo("board-title", "Layers", "nLayers")}
-                  <div class="board-big">${val("nLayers")}</div>
+                  ${labelWithInfo("board-title", "Product\nElaboration", "prodElaboration")}
+                  <div class="board-big">${val("prodElaboration")}</div>
                   <div class="board-subgrid-2">
                     <div>
-                      ${labelWithInfo("board-subhead", "Stickers", "nFeatures")}
+                      ${labelWithInfo("board-subhead", "Features", "nFeatures")}
                       <div class="board-subvalue">${val("nFeatures")}</div>
                     </div>
                     <div>
@@ -887,19 +934,28 @@
                   </div>
                 </div>
                 <div class="board-cell">
-                  ${labelWithInfo("board-title", "Flexibility", "flexibility")}
-                  <div class="board-big">${val("flexibility")}</div>
-                </div>
-                <div class="board-cell">
-                  ${labelWithInfo("board-title", "Elaboration")}
+                  ${labelWithInfo("board-title", "Process Elaboration")}
                   <div class="board-subgrid-2 tight">
                     <div>
-                      ${labelWithInfo("board-subhead", "Total", "elaboration_total_metric")}
-                      <div class="board-subvalue">${val("elaboration_total")}</div>
+                      ${labelWithInfo("board-subhead", "Total", "procElaboration_tot")}
+                      <div class="board-subvalue">${val("procElaboration_tot")}</div>
                     </div>
                     <div>
-                      ${labelWithInfo("board-subhead", "Avg / Layer", "elaboration_avg_per_layer")}
-                      <div class="board-subvalue">${val("elaboration_avg_per_layer")}</div>
+                      ${labelWithInfo("board-subhead", "Avg / Layer", "procElaboration_avg")}
+                      <div class="board-subvalue">${val("procElaboration_avg")}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="board-cell">
+                  ${labelWithInfo("board-title", "Flexibility")}
+                  <div class="board-subgrid-2 tight">
+                    <div>
+                      ${labelWithInfo("board-subhead", "Product", "prodFlexibility")}
+                      <div class="board-subvalue">${val("prodFlexibility")}</div>
+                    </div>
+                    <div>
+                      ${labelWithInfo("board-subhead", "Process", "procFlexibility")}
+                      <div class="board-subvalue">${val("procFlexibility")}</div>
                     </div>
                   </div>
                 </div>
@@ -1559,7 +1615,12 @@
             context.phase ? displayPhaseValue(context.phase) : ""
           ].filter(Boolean).join(" • ");
           resultsSourceEl.textContent = ctxText ? `${sourceText} (${ctxText})` : sourceText;
-          summaryContentEl.innerHTML = buildSummaryHtml(currentDataset.summaryCsv, context, currentDataset.imageSrc || "");
+          summaryContentEl.innerHTML = buildSummaryHtml(
+            currentDataset.summaryCsv,
+            currentDataset.actionsCsv,
+            context,
+            currentDataset.imageSrc || ""
+          );
           currentTimelineDetail = TIMELINE_DEFAULT_DETAIL;
           renderCurrentTimeline();
           window.scrollTo({ top: 0, behavior: "smooth" });
